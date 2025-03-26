@@ -1,0 +1,27 @@
+body {
+    background-color: #f0f4f8;
+    min-height: 100vh;
+}
+
+#chat-history {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 1rem;
+}
+
+.chat-message {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+}
+
+.user-message {
+    background-color: #e2f0cb;
+    margin-left: 20%;
+}
+
+.bot-message {
+    background-color: #ffffff;
+    margin-right: 20%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
