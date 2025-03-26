@@ -1,9 +1,5 @@
 # 🏥 Medical Appointment Chatbot [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<div align="center">
-  <img src="assets/architecture.png" alt="System Architecture" width="600">
-  <p><em>System Architecture Diagram</em></p>
-</div>
 
 A LangChain-powered chatbot for managing medical appointments with:
 - 📅 Natural language scheduling
@@ -12,7 +8,6 @@ A LangChain-powered chatbot for managing medical appointments with:
 - 🌐 Web interface (FastAPI)
 - 🔒 HIPAA-compliant data handling
 
-![System Architecture](assets/architecture.png)
 
 ## Features
 - Natural language appointment scheduling
