@@ -1,4 +1,10 @@
-# Security Best Practices
+# Security Best Practices (LangGraph Version)
+
+5. **Workflow Security**
+   - Validate all state transitions
+   - Implement timeout for workflow steps
+   - Audit workflow execution logs
+   - Encrypt workflow state in transit
 
 1. **Secret Management**
    - Never commit API keys or credentials
