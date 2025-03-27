@@ -1,6 +1,6 @@
 # 🏥 Medical Appointment Chatbot [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A LangChain-powered chatbot for managing medical appointments with:
+A LangChain + LangGraph-powered chatbot for managing medical appointments with:
 - 📅 Natural language scheduling with validation
 - 🔄 Automatic retry mechanisms
 - 📚 PDF knowledge base integration (RAG)
@@ -31,7 +31,24 @@ A LangChain-powered chatbot for managing medical appointments with:
   - Request validation
   - Rate limiting
 
-## 🛠️ Enhanced Architecture
+## 🛠️ Enhanced Architecture (LangGraph Version)
+
+The system now uses LangGraph for state management and workflow orchestration:
+
+```mermaid
+graph TD
+    A[Web Interface] -->|WebSocket| B[Appointment Agent]
+    B -->|LangGraph| C[Workflow Engine]
+    C --> D[Database]
+    C --> E[Notification Service]
+    C --> F[Knowledge Base]
+    D --> G[PostgreSQL]
+    E --> H[SMS/Email]
+    F --> I[FAISS Vector Store]
+    
+    style C stroke:#6c5ce7,stroke-width:4px
+    style B stroke:#ff9f43,stroke-width:4px
+```
 
 ```mermaid
 graph TD
@@ -49,7 +66,12 @@ graph TD
     style E stroke:#0984e3,stroke-width:4px
 ```
 
-## Installation & Setup
+## Installation & Setup (Updated Requirements)
+
+```bash
+# Install with production dependencies including LangGraph
+pip install -r requirements.txt langgraph
+```
 ```bash
 # Clone and setup
 git clone https://github.com/yourusername/medical-chatbot.git
