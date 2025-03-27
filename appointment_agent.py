@@ -1,4 +1,6 @@
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
+from langgraph.graph import Graph
+from langgraph.prebuilt import chat_agent_executor
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from typing import TypedDict, List, Optional, Dict, Any
@@ -17,7 +19,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def validate_config():
+    """Validate required environment variables"""
+    required_vars = [
+        "DB_NAME", "DB_USER",
+        "DB_PASSWORD", "DB_HOST",
+        "OPENAI_API_KEY"
+    ]
+    missing = [var for var in required_vars if not os.getenv(var)]
+    if missing:
+        raise ValueError(f"Missing required environment variables: {missing}")
+
 load_dotenv()
+validate_config()
 
 class AgentState(TypedDict):
     messages: List[Dict[str, Any]]
@@ -102,29 +116,49 @@ llm = ChatOpenAI(
     request_timeout=30
 )
 
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent prompt injection"""
+    return re.sub(r'[^\w\s.,?!-]', '', text)[:500]
+
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a medical appointment assistant. Help with:
-     - Scheduling appointments
-     - Answering clinic questions
-     - Providing medical information
+     - Scheduling appointments (verify availability first)
+     - Answering clinic questions (hours, services, policies)
+     - Providing general medical information (non-diagnostic)
      
-     Be professional and helpful.
+     Rules:
+     1. Always verify patient and doctor IDs
+     2. Never provide medical diagnoses
+     3. Maintain professional tone
+     4. Confirm details before booking
+     
      Current patient: {patient_id}"""),
     ("user", "{input}")
 ])
 
-chain = prompt | llm | StrOutputParser()
+# Create LangGraph workflow
+workflow = Graph()
+workflow.add_node("agent", chat_agent_executor.create_agent(llm, prompt))
+workflow.add_node("book_appointment", book_appointment)
+workflow.set_entry_point("agent")
+workflow.add_conditional_edges(
+    "agent",
+    lambda x: "book_appointment" if "book" in x.get("output", "").lower() else "end",
+)
+workflow.add_edge("book_appointment", "agent")
+app = workflow.compile()
 
 def handle_message(state: AgentState) -> Dict[str, Any]:
-    """Process message with comprehensive error handling"""
+    """Process message using LangGraph workflow"""
     try:
         if not state.get('messages') or not state['messages'][-1]['content']:
             raise ValueError("Empty message content")
-            
-        response = chain.invoke({
-            "input": state['messages'][-1]['content'],
-            "patient_id": state.get('patient_id', 'new patient')
-        })
+        
+        sanitized_input = sanitize_input(state['messages'][-1]['content'])
+        state['input'] = sanitized_input
+        
+        result = app.invoke(state)
+        return {"response": result.get("output", result)}
         
         if "book" in response.lower():
             booking_result = book_appointment(state)
@@ -136,11 +170,53 @@ def handle_message(state: AgentState) -> Dict[str, Any]:
         return {"response": "Sorry, we encountered an error. Please try again later."}
 
 if __name__ == "__main__":
+    import argparse
+    from datetime import datetime
+    
+    parser = argparse.ArgumentParser(
+        description="Medical Appointment Chatbot CLI",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--patient-id",
+        required=True,
+        help="Patient ID in PAT-XXXX format"
+    )
+    parser.add_argument(
+        "--doctor-id",
+        required=True,
+        help="Doctor ID in DR-XXX format"
+    )
+    parser.add_argument(
+        "--message",
+        required=True,
+        help="Appointment request message"
+    )
+    parser.add_argument(
+        "--slot",
+        help="Optional appointment slot (YYYY-MM-DD HH:MM)"
+    )
+    
+    args = parser.parse_args()
+    
+    if not validate_ids(args.patient_id, args.doctor_id):
+        print("Error: Invalid ID format")
+        exit(1)
+        
+    slot = None
+    if args.slot:
+        try:
+            slot = datetime.strptime(args.slot, "%Y-%m-%d %H:%M")
+        except ValueError:
+            print("Error: Invalid slot format. Use YYYY-MM-DD HH:MM")
+            exit(1)
+
     state = {
-        "messages": [{"content": "I need to book a checkup"}],
-        "patient_id": "PAT-1234",
-        "doctor_id": "DR-456",
-        "slot": datetime(2025, 3, 28, 14, 0)
+        "messages": [{"content": args.message}],
+        "patient_id": args.patient_id,
+        "doctor_id": args.doctor_id,
+        "slot": slot
     }
+    
     result = handle_message(state)
     print("Assistant:", result["response"])
