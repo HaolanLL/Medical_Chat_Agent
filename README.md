@@ -1,199 +1,156 @@
 # 🏥 Medical Appointment Chatbot [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
 A LangChain-powered chatbot for managing medical appointments with:
-- 📅 Natural language scheduling
-- 📚 PDF knowledge base integration
-- 📱 SMS/Email notifications
-- 🌐 Web interface (FastAPI)
+- 📅 Natural language scheduling with validation
+- 🔄 Automatic retry mechanisms
+- 📚 PDF knowledge base integration (RAG)
+- 📱 Multi-channel notifications with fallback
+- 🌐 Secure WebSocket interface (FastAPI)
 - 🔒 HIPAA-compliant data handling
+- 📊 Comprehensive logging and monitoring
 
+## Key Features
+- **Reliable Scheduling**:
+  - Input validation for patient/doctor IDs
+  - Database transaction management
+  - Automatic retries for failed operations
 
-## Features
-- Natural language appointment scheduling
-- PDF document knowledge base (emergency procedures, clinic info)
-- SMS/Email notifications
-- RAG integration using LangChain
-- Web interface (FastAPI)
-- Patient record management
+- **Knowledge Integration**:
+  - PDF document processing with error handling
+  - Configurable chunk sizes for embeddings
+  - Automatic document validation
 
-## Installation
+- **Notification System**:
+  - SMS/Email with channel fallback
+  - Retry logic for failed deliveries
+  - Message templating
 
+- **Web Interface**:
+  - Secure WebSocket communication
+  - CORS configuration
+  - Request validation
+  - Rate limiting
+
+## 🛠️ Enhanced Architecture
+
+```mermaid
+graph TD
+    A[Web Interface] -->|WebSocket| B[Appointment Agent]
+    B --> C[Database]
+    B --> D[Notification Service]
+    B --> E[Knowledge Base]
+    D --> F[SMS]
+    D --> G[Email]
+    E --> H[PDF Processing]
+    E --> I[Vector Store]
+    
+    style B stroke:#ff9f43,stroke-width:4px
+    style D stroke:#00b894,stroke-width:4px
+    style E stroke:#0984e3,stroke-width:4px
+```
+
+## Installation & Setup
 ```bash
+# Clone and setup
 git clone https://github.com/yourusername/medical-chatbot.git
 cd medical-chatbot
 python -m venv .venv
 source .venv/bin/activate  # Linux/MacOS
-# .venv\Scripts\activate  # Windows
 
+# Install with production dependencies
 pip install -r requirements.txt
-```
 
-## Configuration
-
-1. Copy example environment file:
-```bash
+# Configure environment
 cp .env.example .env
 ```
 
-2. Update `.env` with your credentials:
+## Configuration Highlights
 ```ini
-OPENAI_API_KEY=your_openai_key
-TWILIO_SID=your_twilio_sid
-TWILIO_TOKEN=your_twilio_token
-SMTP_USER=your_email@example.com
-SMTP_PASSWORD=your_email_password
+# Core Services
+OPENAI_API_KEY=your_key
+DB_HOST=postgres
+DB_NAME=medical_chatbot
+
+# Notifications
+TWILIO_SID=your_sid
+TWILIO_TOKEN=your_token
+PREFERRED_CHANNEL=sms  # or 'email'
+
+# Performance
+CHUNK_SIZE=1000        # RAG processing
+MAX_RETRIES=3          # Operation retries
 ```
 
-## 🖥️ Usage
-
-### Local Development
+## 🚀 Running the System
 ```bash
-# Start development server with hot reload
+# Development
 uvicorn web.main:app --reload
 
-# Run CLI interface
-python appointment_agent.py
-
-# Start Redis for caching
-docker run -p 6379:6379 redis:6-alpine
-```
-
-### Production Setup
-```bash
-# Build and start with Docker Compose
+# Production
 docker compose up --build -d
 
-# Scale horizontally
-docker compose scale app=3
+# Monitoring
+docker compose logs -f app
 ```
 
-### First-Time Setup Diagram
-```mermaid
-sequenceDiagram
-    User->>+Chatbot: Request appointment
-    Chatbot->>+LangChain: Process query
-    LangChain->>+Database: Retrieve patient history
-    Database-->>-LangChain: Return records
-    LangChain-->>-Chatbot: Generate response
-    Chatbot->>+Notification: Send confirmation
-    Notification-->>-User: SMS/Email
+## Monitoring Endpoints
+| Endpoint | Description |
+|----------|-------------|
+| `/health` | System status and version |
+| `/metrics` | Prometheus metrics |
+| `/logs` | Recent application logs |
+
+## Error Handling
+The system implements comprehensive error handling:
+- Automatic retries for transient failures
+- Circuit breakers for external services
+- Detailed error logging
+- Graceful degradation
+
+```python
+@retry(stop=stop_after_attempt(3))
+def critical_operation():
+    try:
+        # Operation logic
+    except Exception as e:
+        logger.error(f"Operation failed: {e}")
+        raise
 ```
 
-## 🚢 Deployment
+## Security Features
+- Environment variable secrets
+- Input validation
+- HTTPS enforcement
+- CORS restrictions
+- Request rate limiting
+- Audit logging
 
-### Production Environment Variables
-```ini
-DEPLOYMENT_ENV=production
-DATABASE_URL=postgresql://user:password@db:5432/medical_chatbot
-REDIS_URL=redis://cache:6379/0
-SSL_ENABLED=true
-```
+## 📈 Deployment Options
+1. **Docker Compose** - Full stack with Postgres/Redis
+2. **Kubernetes** - For scalable deployments
+3. **AWS ECS** - Cloud deployment templates included
 
-### Deployment Options
-
-1. **Docker Compose (Recommended)**
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DEPLOYMENT_ENV=production
-    depends_on:
-      - db
-      - redis
-
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_PASSWORD: medicalchatbot
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis:
-    image: redis:6-alpine
-    volumes:
-      - redisdata:/data
-
-volumes:
-  pgdata:
-  redisdata:
-```
-
-2. **Kubernetes**
-[Full deployment guide available in docs/deployment.md](docs/deployment.md)
-
-3. **Cloud Providers**
-[![Deploy to AWS ECS](https://img.shields.io/badge/Deploy-AWS_ECS-orange)](https://aws.amazon.com/ecs/)
-Sample ECS task definition included in `deploy/aws-ecs-task.json`
-
-### Monitoring
+## Development
 ```bash
-# View logs
-docker compose logs -f
-
-# Health check
-curl http://localhost:8000/health
-
-# Metrics endpoint
-curl http://localhost:8000/metrics
-```
-
-## API Documentation
-
-### Key Endpoints
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | System health status and version |
-| `/chat` | WS | Real-time chat interface (WebSocket) |
-| `/api/appointments` | POST | Create new appointment (JSON payload) |
-| `/api/history` | GET | Retrieve chat history (JWT protected) |
-
-## Development Setup
-
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run with hot reload
-uvicorn web.main:app --reload
-
 # Run tests
 pytest tests/
 
-# Lint code
+# Lint and format
 flake8 .
-
-# Format code
 black .
+
+# Generate docs
+mkdocs build
 ```
 
 ## Documentation Structure
 ```
-/medical-chatbot
-├── web/               # Web interface components
-│   ├── main.py        # FastAPI application
-│   └── templates/     # HTML templates
-├── data/              # Document storage
-│   └── clinic_docs/   # PDF knowledge base
-├── src/               # Core logic
-│   ├── rag/           # RAG components
-│   └── notifications/ # Notification services
-├── tests/             # Test suite
-├── requirements.txt   # Production dependencies
-├── requirements-dev.txt # Development dependencies
-└── README.md          # Documentation
+/docs
+├── architecture.md     # System design
+├── api.md              # Endpoint documentation
+├── deployment.md       # Deployment guides
+└── security.md         # Security practices
 ```
 
-## Security Notes
-- Always use HTTPS in production
-- Store secrets in environment variables (never in code)
-- Regularly rotate API keys
-- Review `security.md` for complete guidelines
-
 ## License
-MIT License
+MIT License - See [LICENSE](LICENSE) for details
