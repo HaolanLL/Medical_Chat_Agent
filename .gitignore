@@ -48,4 +48,4 @@ logs/
 Thumbs.db
 
 # Test files
-testdata/
+testdata/medical_chatbot_walkthrough.ipynb
